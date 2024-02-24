@@ -7,7 +7,7 @@ package frc.robot.commands.AlignAndDrive;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj2.command.PIDCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj.XboxController;
 import frc.Board.DriveTrainTab;
 import frc.robot.RobotShared;
 import frc.robot.constants.AutoConstants;
@@ -23,7 +23,7 @@ public class DriveWhileAligning extends PIDCommand {
     private static DriveTrainTab m_driveTab = DriveTrainTab.getInstance();
   static RobotShared m_robotShared = RobotShared.getInstance();
   private static DriveSubsystem m_drive = m_robotShared.getDriveSubsystem();
-  private static CommandXboxController m_driverController = m_robotShared.getDriverController();
+  private static XboxController m_driverController = m_robotShared.getDriverController();
   public DriveWhileAligning(double angle, boolean fieldRelative, boolean rateLimit) {
     super(
       // The controller that the command will use
@@ -37,7 +37,7 @@ public class DriveWhileAligning extends PIDCommand {
         m_drive.drive(
           -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband), 
           -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband), 
-          output, fieldRelative, rateLimit, OIConstants.kUseQuadraticInput);
+          output, fieldRelative, rateLimit);
       });
     // Use addRequirements() here to declare subsystem dependencies.
     // Configure additional PID options by calling `getController` here.

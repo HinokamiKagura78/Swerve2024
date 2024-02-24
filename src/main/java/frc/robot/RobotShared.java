@@ -5,12 +5,12 @@ import java.util.Optional;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj.XboxController;
 import frc.robot.constants.OIConstants;
 import frc.robot.subsystems.ConveyorSubsystem;
 import frc.robot.subsystems.DriveSubsystem;
-import frc.robot.subsystems.GroundIntakeSubsystem;
-import frc.robot.subsystems.HornSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.LimelightSubsystem;
 import frc.robot.subsystems.PhotonVision;
 import frc.robot.subsystems.SensorSubsystem;
@@ -20,14 +20,14 @@ public class RobotShared {
   private Optional<Alliance> m_alliance = DriverStation.getAlliance();
 
   protected DriveSubsystem m_robotDrive = null;
-  protected HornSubsystem m_horn = null;
-  protected ConveyorSubsystem m_conveyor = null;
-  protected final CommandXboxController m_driverController = new CommandXboxController(OIConstants.kDriverControllerPort);
+  protected ShooterSubsystem m_shooterSubsystem = null;
+  protected ConveyorSubsystem m_conveyorSubsystem = null;
+  protected final XboxController m_XboxController = new XboxController(OIConstants.kDriverControllerPort);
 
   protected LimelightSubsystem m_limelight = null;
   protected PhotonVision m_photonVision = null;
   protected SensorSubsystem m_sensorSubsystem = null;
-  protected GroundIntakeSubsystem m_groundIntakeSubsystem = null;
+  protected IntakeSubsystem m_intakeSubsystem = null;
 
   private static RobotShared instance;
 
@@ -44,23 +44,17 @@ public class RobotShared {
     }
     return m_robotDrive;
   }
-  public HornSubsystem getHornSubsystem() {
-    if(m_horn == null) {
-      m_horn = new HornSubsystem();
+  public ShooterSubsystem getShooterSubsystem() {
+    if(m_shooterSubsystem == null) {
+      m_shooterSubsystem = new ShooterSubsystem();
     }
-    return m_horn;
+    return m_shooterSubsystem;
   }
-  public ConveyorSubsystem getConveyorSubsystem() {
-    if(m_conveyor == null) {
-      m_conveyor = new ConveyorSubsystem();
+  public IntakeSubsystem getIntakeSubsystem() {
+    if(m_intakeSubsystem == null) {
+      m_intakeSubsystem = new IntakeSubsystem();
     }
-    return m_conveyor;
-  }
-  public GroundIntakeSubsystem getGroundIntakeSubsystem() {
-    if(m_groundIntakeSubsystem == null) {
-      m_groundIntakeSubsystem = new GroundIntakeSubsystem();
-    }
-    return m_groundIntakeSubsystem;
+    return m_intakeSubsystem;
   }
   public SensorSubsystem getSensorSubsystem() {
     if(m_sensorSubsystem == null) {
@@ -68,8 +62,14 @@ public class RobotShared {
     }
     return m_sensorSubsystem;
   }
-  public CommandXboxController getDriverController() {
-    return m_driverController;
+  public ConveyorSubsystem getConveyorSubsystem() {
+    if(m_conveyorSubsystem == null){
+      m_conveyorSubsystem = new ConveyorSubsystem();
+    }
+    return m_conveyorSubsystem;
+  }
+  public XboxController getDriverController() {
+    return m_XboxController;
   }
   public LimelightSubsystem getLimelight() {
     if(m_limelight == null) {

@@ -14,14 +14,14 @@ public final class DriveConstants {
   public static final double kMaxSpeedMetersPerSecond = 4.8; // 4.8 is the top speed possible with our modules 
   public static final double kMaxAngularSpeed = 2 * Math.PI; // radians per second
 
-  public static final double kDirectionSlewRate = 4; // radians per second was 1.2
-  public static final double kMagnitudeSlewRate = 2.5; // percent per second (1 = 100%)
-  public static final double kRotationalSlewRate = 4; // percent per second (1 = 100%)
+  public static final double kDirectionSlewRate = 1.2; // radians per second was 1.2
+  public static final double kMagnitudeSlewRate = 1.8; // percent per second (1 = 100%)
+  public static final double kRotationalSlewRate = 2.0; // percent per second (1 = 100%)
 
   // Chassis configuration
-  public static final double kTrackWidth = Units.inchesToMeters(20.625);
+  public static final double kTrackWidth = Units.inchesToMeters(15.5);
   // Distance between centers of right and left wheels on robot
-  public static final double kWheelBase = Units.inchesToMeters(20.625);
+  public static final double kWheelBase = Units.inchesToMeters(15.5);
   // Distance between front and back wheels on robot
 
   public static final double kDriveRadius = Math.hypot(kTrackWidth / 2, kWheelBase / 2);

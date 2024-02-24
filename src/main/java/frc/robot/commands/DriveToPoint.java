@@ -38,7 +38,7 @@ public class DriveToPoint extends PIDCommand {
           double clampedXSpeed = (Math.max(0.0, Math.min(AutoConstants.kMaxSpeedDriveToPointMetersPerSecond, XSpeed)));
           double clampedYSpeed = (Math.max(0.0, Math.min(AutoConstants.kMaxSpeedDriveToPointMetersPerSecond, YSpeed)));
           m_drive.drive(clampedXSpeed, clampedYSpeed, 0, 
-            true, true, false);
+            true, true);
         });
       addRequirements(m_drive);
       // atSetpoint error tolerance

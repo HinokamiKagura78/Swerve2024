@@ -5,29 +5,35 @@
 package frc.robot;
 
 import edu.wpi.first.math.MathUtil;
-
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.XboxController.Button;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import frc.robot.constants.AutoConstants;
 import frc.robot.constants.OIConstants;
+import frc.robot.constants.SubsystemConstants.DriveConstants;
 import frc.robot.commands.AlignToTagPhotonVision;
-import frc.robot.commands.AlignAndDrive.AlignToJoystickAndDrive;
-import frc.robot.commands.AlignAndDrive.AlignToNearestAngleAndDrive;
-import frc.robot.commands.AlignAndDrive.DriveWhileAligning;
-import frc.robot.commands.basic.Horn.HornIntake;
 import frc.robot.subsystems.ConveyorSubsystem;
 import frc.robot.subsystems.DriveSubsystem;
-import frc.robot.subsystems.GroundIntakeSubsystem;
-import frc.robot.subsystems.HornSubsystem;
+import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.subsystems.IntakeSubsystem;
+
 // import frc.utils.OnTheFlyPathing;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.SwerveControllerCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-import edu.wpi.first.wpilibj2.command.button.POVButton;
+
+import java.util.List;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
@@ -43,15 +49,14 @@ public class RobotContainer {
   // The robot's subsystems
   private DriveSubsystem m_robotDrive;
   private ConveyorSubsystem m_conveyorSubsystem;
-  private GroundIntakeSubsystem m_groundIntakeSubsystem;
-  private HornSubsystem m_hornSubsystem;
-  
+  private ShooterSubsystem m_shooterSubsystem;
+  private IntakeSubsystem m_intakeSubsystem;
   private RobotShared m_robotShared = RobotShared.getInstance();
 
   PathPlannerPath m_ExamplePath = PathPlannerPath.fromPathFile("Example Path");
 
   // The driver's controller
-  CommandXboxController m_driverController;
+  XboxController m_XboxController;
 
   SendableChooser<Command> autoChooser;
 
@@ -78,23 +83,13 @@ public class RobotContainer {
       // The left stick controls translation of the robot.
       // Turning is controlled by the X axis of the right stick.
       // If any changes are made to this, please update DPad driver controls
-      if(OIConstants.kUseFieldRelitiveRotation){
-        m_robotDrive.setDefaultCommand(new RunCommand(() -> 
-          new AlignToJoystickAndDrive(
-            m_driverController.getRightX(),
-            m_driverController.getRightY(),
-            true, true, 
-            (-MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband) + 
-            -MathUtil.applyDeadband(m_driverController.getRightY(), OIConstants.kDriveDeadband) != 0) ? 1 : 0).execute(), m_robotDrive));
-      }else{
-        m_robotDrive.setDefaultCommand(
-          new RunCommand(() -> m_robotDrive.drive(
-              -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
-              -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband),
-              -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband),
-              true, true, OIConstants.kUseQuadraticInput),
-            m_robotDrive));
-        }
+      new RunCommand(
+            () -> m_robotDrive.drive(
+                -MathUtil.applyDeadband(m_XboxController.getLeftY(), OIConstants.kDriveDeadband),
+                -MathUtil.applyDeadband(m_XboxController.getLeftX(), OIConstants.kDriveDeadband),
+                -MathUtil.applyDeadband(m_XboxController.getRightX(), OIConstants.kDriveDeadband),
+                true, true),
+            m_robotDrive);
   }
 
   private void initSubsystems() {
@@ -104,12 +99,12 @@ public class RobotContainer {
     m_robotDrive = m_robotShared.getDriveSubsystem();
     m_robotShared.getSensorSubsystem(); // no setting because not used
     m_robotShared.getLimelight();
-    m_hornSubsystem = m_robotShared.getHornSubsystem();
+    m_shooterSubsystem = m_robotShared.getShooterSubsystem();
     m_conveyorSubsystem = m_robotShared.getConveyorSubsystem();
-    m_groundIntakeSubsystem = m_robotShared.getGroundIntakeSubsystem();
+    m_intakeSubsystem = m_robotShared.getIntakeSubsystem();
   }
   private void initInputDevices() {
-    m_driverController = m_robotShared.getDriverController();
+    m_XboxController = m_robotShared.getDriverController();
   }
 
   /**
@@ -122,89 +117,28 @@ public class RobotContainer {
    * {@link JoystickButton}.
    */
   private void configureButtonBindings() {
+    new JoystickButton(m_XboxController, Button.kX.value)
+        .whileTrue(new RunCommand(() -> m_robotDrive.setX(),m_robotDrive));
 
-    m_driverController.a()
-      .onTrue(new InstantCommand(() -> m_robotDrive.zeroHeading()));
+      new JoystickButton(m_XboxController, Button.kA.value)
+        .whileTrue(new RunCommand(() -> m_intakeSubsystem.startMotor(), m_intakeSubsystem))
+        .whileTrue(new RunCommand(() -> m_conveyorSubsystem.halfForwardMotor(), m_conveyorSubsystem))
+        .whileFalse(new RunCommand(() -> m_intakeSubsystem.stopMotor(), m_intakeSubsystem))
+         .whileFalse(new RunCommand(() -> m_conveyorSubsystem.stopMotor(), m_conveyorSubsystem));
 
-    //Robot relative mode
-    m_driverController.leftBumper()
-      .whileTrue(new RunCommand(
-        () -> m_robotDrive.drive(
-          -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband),
-          -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband),
-          -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband),
-          false, true, OIConstants.kUseQuadraticInput),
-        m_robotDrive));
-    
-    //Half Speed mode
-    m_driverController.rightBumper()
-      .whileTrue(new RunCommand(
-        () -> m_robotDrive.drive(
-          -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband) / 2,
-          -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband) / 2,
-          -MathUtil.applyDeadband(m_driverController.getRightX(), OIConstants.kDriveDeadband) / 2,
-          true, true, OIConstants.kUseQuadraticInput),
-        m_robotDrive));
-    
-
-    //Testing path following
-    m_driverController.b()
-      .whileTrue(new SequentialCommandGroup(
-        new InstantCommand(() -> m_robotDrive.resetOdometry(m_ExamplePath.getPreviewStartingHolonomicPose())),
-        AutoBuilder.followPath(m_ExamplePath)
-      ));
-      m_driverController.y()
-      .whileTrue(new HornIntake(-0.2)
-      )
-      .onFalse(
-        new ParallelCommandGroup(
-        new InstantCommand(() -> m_conveyorSubsystem.setConveyorSpeed(0)),
-        new InstantCommand(() -> m_hornSubsystem.setHornSpeed(0)))
-      );
-      m_driverController.start()
-      .whileTrue( 
-        new ParallelCommandGroup(
-        new RunCommand(() -> m_conveyorSubsystem.setConveyorSpeed(1)),
-        new RunCommand(() -> m_hornSubsystem.setHornSpeed(1)))
-      )
-      .onFalse(
-        new ParallelCommandGroup(
-        new InstantCommand(() -> m_conveyorSubsystem.setConveyorSpeed(0)),
-        new InstantCommand(() -> m_hornSubsystem.setHornSpeed(0)))
-      );
-      //intake
-    m_driverController.x()
-      .whileTrue( 
-        new ParallelCommandGroup(
-        new RunCommand(() -> m_groundIntakeSubsystem.setGroundIntakeSpeed(1)),
-        new RunCommand(() -> m_conveyorSubsystem.setConveyorSpeed(1)),
-        new RunCommand(() -> m_hornSubsystem.setHornSpeed(-.1)))
-      )
-      .onFalse(
-        new ParallelCommandGroup(
-        new InstantCommand(() -> m_groundIntakeSubsystem.setGroundIntakeSpeed(0)),
-        new InstantCommand(() -> m_conveyorSubsystem.setConveyorSpeed(0)),
-        new InstantCommand(() -> m_hornSubsystem.setHornSpeed(0)))
-      );
-      // m_driverController.y()
-      // .whileTrue(
-      //   new OnTheFlyPathing().getOnTheFlyPath(0, 0)
-      // );
-
-    m_driverController.rightStick()
-      .onTrue(new SequentialCommandGroup(
-        // double normalizedAngle = (int)((m_robotDrive.getHeading() + 180) / (360 / 8)),  // This is the uncondensed code
-        new AlignToNearestAngleAndDrive(true, true).withTimeout(3))
         
-      );
-    // Something super janky is happening here but it works so
-    for(int angleForDPad = 0; angleForDPad <= 7; angleForDPad++) { // Sets all the DPad to rotate to an angle
-      new POVButton(m_driverController.getHID(), angleForDPad * 45)
-        .onTrue(
-          new DriveWhileAligning(angleForDPad * -45, true, true).withTimeout(3)); // -45 could be 45 
-    }
+      new JoystickButton(m_XboxController, Button.kB.value)
+        .whileTrue(new RunCommand(() -> m_conveyorSubsystem.backwardsMotor(), m_conveyorSubsystem))
+        .whileFalse(new RunCommand(() -> m_conveyorSubsystem.stopMotor(), m_conveyorSubsystem));
 
-  }
+        
+      new JoystickButton(m_XboxController, Button.kY.value)
+        .whileTrue(new RunCommand(() -> m_shooterSubsystem.startMotor(), m_shooterSubsystem))
+        .whileTrue(new RunCommand(() -> m_conveyorSubsystem.forwardMotor(), m_conveyorSubsystem))
+        .whileFalse(new RunCommand(() -> m_conveyorSubsystem.stopMotor(), m_conveyorSubsystem))
+        .whileFalse(new RunCommand(() -> m_shooterSubsystem.stopMotor(), m_shooterSubsystem));
+
+      }
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -212,6 +146,42 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return autoChooser.getSelected();
+    // Create config for trajectory
+    TrajectoryConfig config = new TrajectoryConfig(
+        AutoConstants.kMaxSpeedMetersPerSecond,
+        AutoConstants.kMaxAccelerationMetersPerSecondSquared)
+        // Add kinematics to ensure max speed is actually obeyed
+        .setKinematics(DriveConstants.kDriveKinematics);
+    // An example trajectory to follow. All units in meters.
+    Trajectory exampleTrajectory = TrajectoryGenerator.generateTrajectory(
+        // Start at the origin facing the +X direction
+        new Pose2d(0, 0, new Rotation2d(0)),
+        // Pass through these two interior waypoints, making an 's' curve path
+        List.of(new Translation2d(-1, 0), new Translation2d(-2, new Rotation2d(-Math.PI/2))),
+        // End 3 meters straight ahead of where we started, facing forward
+        new Pose2d(-3, 0, new Rotation2d(0)),
+        config.setReversed(true));
+
+    var thetaController = new ProfiledPIDController(
+        AutoConstants.kPThetaController, 0, 0, AutoConstants.kThetaControllerConstraints);
+    thetaController.enableContinuousInput(-Math.PI, Math.PI);
+
+    SwerveControllerCommand swerveControllerCommand = new SwerveControllerCommand(
+        exampleTrajectory,
+        m_robotDrive::getPose, // Functional interface to feed supplier
+        DriveConstants.kDriveKinematics,
+
+        // Position controllers
+        new PIDController(AutoConstants.kPXController, 0, 0),
+        new PIDController(AutoConstants.kPYController, 0, 0),
+        thetaController,
+        m_robotDrive::setModuleStates,
+        m_robotDrive);
+
+    // Reset odometry to the starting pose of the trajectory.
+    m_robotDrive.resetOdometry(exampleTrajectory.getInitialPose());
+
+    // Run path following command, then stop at the end.
+    return swerveControllerCommand.andThen(() -> m_robotDrive.drive(0, 0, 0, false, false));
   }
 }

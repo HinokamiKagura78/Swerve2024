@@ -8,7 +8,7 @@ package frc.robot.commands.AlignAndDrive;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj2.command.PIDCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj.XboxController;
 import frc.robot.RobotShared;
 import frc.robot.constants.AutoConstants;
 import frc.robot.constants.GyroConstants;
@@ -25,7 +25,7 @@ public class AlignToJoystickAndDrive extends PIDCommand {
   
   static RobotShared m_robotShared = RobotShared.getInstance();
   private static DriveSubsystem m_drive = m_robotShared.getDriveSubsystem();
-  private static CommandXboxController m_driverController = m_robotShared.getDriverController(); 
+  private static XboxController m_driverController = m_robotShared.getDriverController(); 
   // isThereInput == 1 if true
   public AlignToJoystickAndDrive(double newXInput, double newYInput, boolean fieldRelative, boolean rateLimit, int isThereInput) {
     super(
@@ -42,7 +42,7 @@ public class AlignToJoystickAndDrive extends PIDCommand {
         m_drive.drive(
           -MathUtil.applyDeadband(m_driverController.getLeftY(), OIConstants.kDriveDeadband), 
           -MathUtil.applyDeadband(m_driverController.getLeftX(), OIConstants.kDriveDeadband), 
-          output, fieldRelative, rateLimit, OIConstants.kUseQuadraticInput);
+          output, fieldRelative, rateLimit);
       });
     // Use addRequirements() here to declare subsystem dependencies.
     // Configure additional PID options by calling `getController` here.
