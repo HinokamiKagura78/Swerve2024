@@ -44,6 +44,7 @@ public class LimelightTable {
 
   private LimelightTable() {
     initNetworkTableInstance();
+    instance.setCamMode(3);
   }
 
   public static LimelightTable getInstance() {
